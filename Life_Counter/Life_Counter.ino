@@ -45,38 +45,14 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(increaseP2), ISRIncreaseP2, FALLING);
   attachInterrupt(digitalPinToInterrupt(decreaseP1), ISRDecreaseP1, FALLING);
   attachInterrupt(digitalPinToInterrupt(decreaseP2), ISRDecreaseP2, FALLING);
-  /*TODO
-     Decide if I want to have the reset buttons on interrupts
-  */
-  //  attachInterrupt(digitalPinToInterrupt(resetP1), ISRResetP1, FALLING);
-  //  attachInterrupt(digitalPinToInterrupt(resetP2), ISRResetP1, FALLING);
 }
 
 void loop() {
-  /*TODO
-     Implement a timer system that reset the life after three seconds of the buttons being pushed
-  */
-  while (digitalRead(resetP1) == LOW && digitalRead(resetP2) == LOW) {
-    keyCount++;
-    Serial.println(keyCount);
-    if (keyCount > 300) {
-      assignBuffer(allPeriodsBuffer);
-      p1Alpha4.writeDisplay();
-      p2Alpha4.writeDisplay();
-      p1Life = 20;
-      p2Life = 20;
-      keyCount = 0;
-    }
-    delay(10);
-  }
-  keyCount = 0;
-
+  resetButtons();
   intSeperation(p1Life, p2Life);
-
   assignBuffer(lifeBuffer);
   p1Alpha4.writeDisplay();
   p2Alpha4.writeDisplay();
-  //delay(200);
 }
 void ISRIncreaseP1() {
   p1Life++;
@@ -116,9 +92,20 @@ void assignBuffer(char * displayBuffer) {
   p2Alpha4.writeDigitAscii(3, displayBuffer[1]);
 }
 
-//void ISRResetP1() {
-//  p1ResetFlag = true;
-//}
-//void ISRResetP2() {
-//  p2ResetFlag = true;
-//}
+void resetButtons() {
+  while (digitalRead(resetP1) == LOW && digitalRead(resetP2) == LOW) {
+    keyCount++;
+    if (keyCount > 300) {
+      
+      assignBuffer(allPeriodsBuffer);
+      p1Alpha4.writeDisplay();
+      p2Alpha4.writeDisplay();
+      
+      p1Life = 20;
+      p2Life = 20;
+      keyCount = 0;
+    }
+    delay(10);
+  }
+  keyCount = 0;
+}
