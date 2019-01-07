@@ -42,12 +42,22 @@ char p2tensDigit;
 int keyCount = 0;
 int p1Life = 20;
 int p2Life = 20;
+int who = 0;
 
+bool usbDisable = true;
 //long randRollP1;
 
 //------------------------------------------------------------------------------------------------------
 void setup() {
-  pinMode(13, OUTPUT);
+  for (int i = 0; i < 46; i++) {    //Sets all unused pins to output to save a tiny bit of power
+    if (!(i == INCREASEP1) || !(i == DECREASEP1) || !(i == RESETP1) || !(i == INCREASEP2) || !(i == DECREASEP2) || !(i == RESETP2)) {
+      pinMode(i, OUTPUT);
+    }
+    if (usbDisable) {
+      Serial.end();
+    }
+
+  }
   /*TODO
      Find out why the external pullup is not working, the pin is always reading as low
      It is the same setup as the four other pins
@@ -74,7 +84,6 @@ void setup() {
 }
 
 //------------------------------------------------------------------------------------------------------
-int who = 0;
 void loop() {
 
   switch (who) {           //Switch case as "sudo" interrupt since sleep doesnt allow ISRs
