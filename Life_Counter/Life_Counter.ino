@@ -1,4 +1,5 @@
 #include <Wire.h>
+#include <Snooze.h>
 #include <Adafruit_GFX.h>
 #include "Adafruit_LEDBackpack.h"
 #include <elapsedMillis.h>
@@ -6,18 +7,21 @@
 Adafruit_AlphaNum4 p1Alpha4 = Adafruit_AlphaNum4();
 Adafruit_AlphaNum4 p2Alpha4 = Adafruit_AlphaNum4();
 
-const int increaseP1 = 12;
-const int decreaseP1 = 11;
-const int resetP1 = 10;
-const int increaseP2 = 9;
-const int decreaseP2 = 8;
-const int resetP2 = 7;
+SnoozeDigital digital;
+SnoozeBlock config(digital);
+
+const int increaseP1 = 11;
+const int decreaseP1 = 10;
+const int resetP1 = 9;
+const int increaseP2 = 7;
+const int decreaseP2 = 6;
+const int resetP2 = 4;
 char lifeBuffer[4] = {'2', '0', '2', '0'};
 char allPeriodsBuffer[4] = {'*', '*', '*', '*'};
 char winBuffer[4] = {' ', ' ', ' ', ' '};
-char youWinArray[11] = {'Y', 'O', 'U', ' ', 'W', 'I', 'N', '!', ' ', ' ', ' '};
+char youWinArray[11] = {'Y', 'O', 'U', ' ', 'W', 'I', 'N', ' ', ' ', ' ', ' '};
 char loseBuffer[4] = {' ', ' ', ' ', ' '};
-char youLoseArray[12] = {'Y', 'O', 'U', ' ', 'L', 'O', 'S', 'E', '!', ' ', ' ', ' '};
+char youLoseArray[12] = {'Y', 'O', 'U', ' ', 'L', 'O', 'S', 'E', ' ', ' ', ' ', ' '};
 char p1onesDigit;
 char p1tensDigit;
 char p2onesDigit;
@@ -28,73 +32,103 @@ int p1Life = 20;
 int p2Life = 20;
 
 void setup() {
+  pinMode(13, OUTPUT);
   /*TODO
      Find out why the external pullup is not working, the pin is always reading as low
      It is the same setup as the four other pins
      Finish random generator and add new button for rolling
   */
-  pinMode(resetP1, INPUT_PULLUP);
-  pinMode(resetP2, INPUT_PULLUP);
+  //  pinMode(resetP1, INPUT_PULLUP);
+  //  pinMode(resetP2, INPUT_PULLUP);
   Serial.begin(9600);
   p1Alpha4.begin(0x70);
-  p1Alpha4.setBrightness(5);
+  p1Alpha4.setBrightness(4);
   p2Alpha4.begin(0x71);
-  p2Alpha4.setBrightness(5);
-  attachInterrupt(digitalPinToInterrupt(increaseP1), ISRIncreaseP1, FALLING);
-  attachInterrupt(digitalPinToInterrupt(increaseP2), ISRIncreaseP2, FALLING);
-  attachInterrupt(digitalPinToInterrupt(decreaseP1), ISRDecreaseP1, FALLING);
-  attachInterrupt(digitalPinToInterrupt(decreaseP2), ISRDecreaseP2, FALLING);
+  p2Alpha4.setBrightness(4);
+
+  digital.pinMode(increaseP1, INPUT_PULLUP, FALLING);//pin, mode, type
+  digital.pinMode(increaseP2, INPUT_PULLUP, FALLING);//pin, mode, type
+  digital.pinMode(decreaseP1, INPUT_PULLUP, FALLING);//pin, mode, type
+  digital.pinMode(decreaseP2, INPUT_PULLUP, FALLING);//pin, mode, type
+  digital.pinMode(resetP1, INPUT_PULLUP, FALLING);//pin, mode, type
+  digital.pinMode(resetP2, INPUT_PULLUP, FALLING);//pin, mode, type
+  //  attachInterrupt(digitalPinToInterrupt(increaseP1), ISRIncreaseP1, FALLING);
+  //  attachInterrupt(digitalPinToInterrupt(increaseP2), ISRIncreaseP2, FALLING);
+  //  attachInterrupt(digitalPinToInterrupt(decreaseP1), ISRDecreaseP1, FALLING);
+  //  attachInterrupt(digitalPinToInterrupt(decreaseP2), ISRDecreaseP2, FALLING);
   //randomSeed(analogRead(0));
 }
 
 //------------------------------------------------------------------------------------------------------
+int who = 0;
 void loop() {
-  resetButtons();
+  switch (who) {
+    case increaseP1:
+      ISRIncreaseP1();
+      break;
+    case decreaseP1:
+      ISRDecreaseP1();
+      break;
+    case increaseP2:
+      ISRIncreaseP2();
+      break;
+    case decreaseP2:
+      ISRDecreaseP2();
+      break;
+    case resetP1:
+      resetButtons();
+      break;
+    case resetP2:
+      resetButtons();
+      break;
+    default:
+      break;
+  }
+  youLose();
+  youWin();
   intSeperation(p1Life, p2Life);
   assignBuffer(lifeBuffer);
   p1Alpha4.writeDisplay();
   p2Alpha4.writeDisplay();
-  youLose();
-  youWin();
-  resetLife();
+  who = Snooze.deepSleep( config );// return module that woke processor
 }
 
 //------------------------------------------------------------------------------------------------------
 /**
- * Interrupt routine for player one
- */
+   Interrupt routine for player one
+*/
 void ISRIncreaseP1() {
   p1Life++;
 }
 
 //------------------------------------------------------------------------------------------------------
 /**
- * Interrupt routine for player one
- */
+   Interrupt routine for player one
+*/
 void ISRDecreaseP1() {
   p1Life--;
 }
 
 //------------------------------------------------------------------------------------------------------
 /**
- * Interrupt routine for player two
- */
+   Interrupt routine for player two
+*/
 void ISRIncreaseP2() {
   p2Life++;
 }
 
 //------------------------------------------------------------------------------------------------------
 /**
- * Interrupt routine for player two
- */
+   Interrupt routine for player two
+*/
 void ISRDecreaseP2() {
   p2Life--;
 }
 
 //------------------------------------------------------------------------------------------------------
 /**
- * 
- */
+
+*/
 void intSeperation(int lifeP1, int lifeP2) {
   p1onesDigit = (lifeP1 % 10) + 48;
   p1tensDigit = ((lifeP1 / 10) % 10) + 48;
@@ -127,17 +161,24 @@ void assignBuffer(char * displayBuffer) {
 /**
    Checks if the reset buttons are pressed for 3 seconds and sets the screen to stars and resets the life
 */
+bool stateFlag = false;
 void resetButtons() {
-  while (digitalRead(resetP1) == LOW && digitalRead(resetP2) == LOW) {
+  while (digitalRead(resetP1) == LOW && digitalRead(resetP2) == LOW && !stateFlag) {
     keyCount++;
     if (keyCount > 300) {
 
       resetLife();
       keyCount = 0;
+      stateFlag = true;
     }
     delay(10);
   }
+  delay(200);
   keyCount = 0;
+
+  //  intSeperation(p1Life, p2Life);
+  //  assignBuffer(lifeBuffer);
+  stateFlag = false;
 }
 
 //------------------------------------------------------------------------------------------------------
@@ -151,7 +192,7 @@ void resetLife() {
   p2Alpha4.writeDisplay();
   p1Life = 20;
   p2Life = 20;
-  delay(50);
+  delay(100);
 }
 
 //------------------------------------------------------------------------------------------------------
@@ -171,7 +212,8 @@ void youLose() {
       p1Alpha4.writeDigitAscii(2, loseBuffer[2]);
       p1Alpha4.writeDigitAscii(3, loseBuffer[3]);
       p1Alpha4.writeDisplay();
-      delay(100);
+      delay(200);
+
     }
   } else if (p2Life == 0) {
     for (int i = 0; i < 12; i++) {
@@ -185,9 +227,10 @@ void youLose() {
       p2Alpha4.writeDigitAscii(2, loseBuffer[2]);
       p2Alpha4.writeDigitAscii(3, loseBuffer[3]);
       p2Alpha4.writeDisplay();
-      delay(100);
+      delay(200);
     }
   }
+
 }
 
 //------------------------------------------------------------------------------------------------------
@@ -207,8 +250,10 @@ void youWin() {
       p2Alpha4.writeDigitAscii(2, winBuffer[2]);
       p2Alpha4.writeDigitAscii(3, winBuffer[3]);
       p2Alpha4.writeDisplay();
-      delay(100);
+      delay(200);
+
     }
+    resetLife();
   } else if (p2Life == 0) {
     for (int i = 0; i < 11; i++) {
       winBuffer[0] = winBuffer[1];
@@ -221,8 +266,10 @@ void youWin() {
       p1Alpha4.writeDigitAscii(2, winBuffer[2]);
       p1Alpha4.writeDigitAscii(3, winBuffer[3]);
       p1Alpha4.writeDisplay();
-      delay(100);
+      delay(200);
     }
+    resetLife();
   }
+
 }
 
