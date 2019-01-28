@@ -31,8 +31,6 @@ char lifeBuffer[4] = {'2', '0', '2', '0'};
 char allPeriodsBuffer[4] = {'*', '*', '*', '*'};
 char winBuffer[4] = {' ', ' ', ' ', ' '};
 char loseBuffer[4] = {' ', ' ', ' ', ' '};
-char youWinArray[12] = {'Y', 'O', 'U', ' ', 'W', 'I', 'N', ' ', ' ', ' ', ' ', ' '};
-char youLoseArray[12] = {'Y', 'O', 'U', ' ', 'L', 'O', 'S', 'E', ' ', ' ', ' ', ' '};
 
 char p1onesDigit;
 char p1tensDigit;
@@ -196,39 +194,6 @@ void resetLife() {
   p1Life = 20;
   p2Life = 20;
   delay(1000);
-}
-
-//------------------------------------------------------------------------------------------------------
-/**TODO: Combine youLose and youWin functions since they follow the same logic
-   Checks if either player 1 or player 2 has zero life and prints out 'you lose' to the loser
-*/
-void printWinner() {
-  if (p1Life == 0) {
-    setWinLose(loseBuffer, youLoseArray, 1);
-    setWinLose(winBuffer, youWinArray, 2);
-
-    resetLife();
-  } else if (p2Life == 0) {
-    setWinLose(loseBuffer, youLoseArray, 2);
-    setWinLose(winBuffer, youWinArray, 1);
-
-    resetLife();
-  }
-}
-
-void setWinLose(char * winLoseBuffer, char * winLoseArray, int playerNumber) {
-  for (int i = 0; i < 12; i++) {
-    winLoseBuffer[0] = winLoseBuffer[1];
-    winLoseBuffer[1] = winLoseBuffer[2];
-    winLoseBuffer[2] = winLoseBuffer[3];
-    winLoseBuffer[3] = winLoseArray[i];
-    if (playerNumber == 1) {
-      assignBufferP1(winLoseBuffer, false);
-    } else if (playerNumber == 2) {
-      assignBufferP1(winLoseBuffer, true);
-    }
-    delay(200);
-  }
 }
 
 //------------------------------------------------------------------------------------------------------
